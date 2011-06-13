@@ -2,7 +2,7 @@ namespace :import_products do
   desc "Copies all migrations and assets (NOTE: This will be obsolete with Rails 3.1)"
   task :install do
     Rake::Task['import_products:install:migrations'].invoke
-    Rake::Task['import_products:install:assets'].invoke
+#    Rake::Task['import_products:install:assets'].invoke
   end
 
   namespace :install do
