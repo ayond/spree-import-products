@@ -29,7 +29,7 @@ class ProductImport < ActiveRecord::Base
       end
       log("#{@names_of_products_before_import}")
             
-      rows = CSV.read(self.data_file.path)
+      rows = CSV.read(self.data_file.path, :encoding => "utf-8")
       
       if IMPORT_PRODUCT_SETTINGS[:first_row_is_headings]
         col = get_column_mappings(rows[0])
@@ -48,8 +48,11 @@ class ProductImport < ActiveRecord::Base
         col.each do |key, value|
           product_information[key] = row[value]
         end
-        
-        
+
+        if product_information[:name].nil?
+          log "Skipping row without product name"
+          next
+        end
         #Manually set available_on if it is not already set
         product_information[:available_on] = DateTime.now - 1.day if product_information[:available_on].nil?
 
@@ -114,11 +117,15 @@ class ProductImport < ActiveRecord::Base
         field.to_s, field.to_s]
       )
       if applicable_option_type.is_a?(OptionType)
+        log "Option type: #{applicable_option_type.name}"
         product.option_types << applicable_option_type unless product.option_types.include?(applicable_option_type)
-        variant.option_values << applicable_option_type.option_values.find(
+        option_value = applicable_option_type.option_values.find(
           :all,
           :conditions => ["presentation = ? OR name = ?", value, value]
         )
+        option_value << applicable_option_type.option_values.create(:name => value, :presentation => value) if option_value.empty?
+
+        variant.option_values << option_value
       end
     end
     
