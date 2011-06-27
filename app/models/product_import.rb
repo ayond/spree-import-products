@@ -137,7 +137,7 @@ class ProductImport < ActiveRecord::Base
       end
       
       log "Creating relations"
-      create_relations(variant, options[:with])
+      create_relations(variant.product, options[:with])
 
       #Log a success message
       log("Variant of SKU #{variant.sku} successfully imported.\n")  
@@ -208,6 +208,9 @@ class ProductImport < ActiveRecord::Base
         end
       end
       
+      log "Creating relations"
+      create_relations(product, params_hash)
+
       #Log a success message
       log("#{product.name} successfully imported.\n")
     end
