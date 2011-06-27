@@ -136,6 +136,9 @@ class ProductImport < ActiveRecord::Base
         find_and_attach_image_to(variant, options[:with][field.to_sym])
       end
       
+      log "Creating relations"
+      create_relations(variant, options[:with])
+
       #Log a success message
       log("Variant of SKU #{variant.sku} successfully imported.\n")  
     else
@@ -322,5 +325,20 @@ class ProductImport < ActiveRecord::Base
     end
   end
   ### END TAXON HELPERS ###
+
+  def create_relations(product, product_information)
+    log "No relation types" if IMPORT_PRODUCT_SETTINGS[:relation_types].empty?
+    IMPORT_PRODUCT_SETTINGS[:relation_types].each do |relation_type_symbol|
+      relation_type_name = relation_type_symbol.to_s.capitalize.gsub(/_/, " ")
+      log "Relation type: #{relation_type_name}"
+      relation_type = RelationType.find_by_name(relation_type_name)
+      relation_type = RelationType.create(:name => relation_type_name, :applies_to => "Product") if relation_type.nil?
+      related_variant = Variant.find_by_sku(product_information[relation_type_symbol])
+      log "Related to #{product_information[relation_type_symbol]}"
+      Relation.create(:relation_type => relation_type,
+                      :relatable => product,
+                      :related_to => related_variant.product) unless related_variant.nil?
+    end
+  end
 end
 

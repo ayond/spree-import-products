@@ -28,6 +28,7 @@ IMPORT_PRODUCT_SETTINGS = {
   :create_variants => true, #Compares products and creates a variant if that product already exists.
   :variant_comparator_field => :permalink, #Which product field to detect duplicates on
   :multi_domain_importing => true, #If Spree's multi_domain extension is installed, associates products with store
-  :store_field => :store_code #Which field of the column mappings contains either the store id or store code?
+  :store_field => :store_code, #Which field of the column mappings contains either the store id or store code?
+  :relation_types => []
 }
 
