@@ -85,7 +85,7 @@ class ProductImport < ActiveRecord::Base
 
     rescue Exception => exp
       log("An error occurred during import, please check file and try again. (#{exp.message})\n#{exp.backtrace.join('\n')}", :error)
-      raise Exception(exp.message)
+      raise
     end
 
     #All done!
@@ -110,7 +110,7 @@ class ProductImport < ActiveRecord::Base
     options[:with][:price] = options[:with].delete(:master_price)
     
     #First, set the primitive fields on the object (prices, etc.)
-    options[:with].each do |field, value|
+    options[:with].reject {|field, value| value.nil? }.each do |field, value|
       variant.send("#{field}=", value) if variant.respond_to?("#{field}=")
       applicable_option_type = OptionType.find(:first, :conditions => [
         "lower(presentation) = ? OR lower(name) = ?",
@@ -146,6 +146,7 @@ class ProductImport < ActiveRecord::Base
       log "Creating relations"
       create_relations(variant.product, options[:with])
 
+#      create_properties(variant
       #Log a success message
       log("Variant of SKU #{variant.sku} successfully imported.\n")  
     else
@@ -217,6 +218,9 @@ class ProductImport < ActiveRecord::Base
       
       log "Creating relations"
       create_relations(product, params_hash)
+
+      log "Setting properties"
+      set_properties(product, params_hash)
 
       #Log a success message
       log("#{product.name} successfully imported.\n")
@@ -348,6 +352,22 @@ class ProductImport < ActiveRecord::Base
       Relation.create(:relation_type => relation_type,
                       :relatable => product,
                       :related_to => related_variant.product) unless related_variant.nil?
+    end
+  end
+
+  def set_properties(product, params_hash)
+    
+    params_hash.reject {|field, value| value.nil?}.each do |field, value|
+      next if product.respond_to?("#{field}=")
+      property = Property.find_by_name(field.to_s)
+      next if property.nil?
+      product_property = ProductProperty.find(:first, :conditions =>
+                           ["product_id = ? AND property_id = ?", product.id, property.id])
+      product_property ||= ProductProperty.create(:product => product, :property => property)
+      log "Setting property: #{property.name}"
+      product_property.value = value
+      log "Product property invalid" unless product_property.valid?
+      product_property.save
     end
   end
 end
