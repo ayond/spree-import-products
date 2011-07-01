@@ -331,6 +331,7 @@ class ProductImport < ActiveRecord::Base
       hierarchy = hierarchy.split(/\s*>\s*/)
       last_taxon = taxonomy.root
       hierarchy.each do |taxon|
+        taxon = taxon.rstrip
         last_taxon = last_taxon.children.find_or_create_by_name_and_taxonomy_id(taxon, taxonomy.id)
       end
       
