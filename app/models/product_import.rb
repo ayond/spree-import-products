@@ -107,7 +107,7 @@ class ProductImport < ActiveRecord::Base
     
     #Remap the options - oddly enough, Spree's product model has master_price and cost_price, while
     #variant has price and cost_price.
-    options[:with][:price] = options[:with].delete(:master_price)
+#    options[:with][:price] = options[:with].delete(:master_price)
     
     #First, set the primitive fields on the object (prices, etc.)
     options[:with].reject {|field, value| value.nil? }.each do |field, value|
@@ -129,10 +129,14 @@ class ProductImport < ActiveRecord::Base
       end
     end
     
-    
+
     if variant.valid?
       variant.save
       
+      log "Variant price: #{variant.price}"
+      special_price_field = IMPORT_PRODUCT_SETTINGS[:special_price_field]
+      set_special_price(variant, options[:with][special_price_field.to_sym])
+
       #Associate our new variant with any new taxonomies
       IMPORT_PRODUCT_SETTINGS[:taxonomy_fields].each do |field| 
         associate_product_with_taxon(variant.product, field.to_s, options[:with][field.to_sym])
@@ -186,9 +190,13 @@ class ProductImport < ActiveRecord::Base
     if @names_of_products_before_import.include? product.name
       log("#{product.name} is already in the system.\n")
     else
+
+
       #Save the object before creating asssociated objects
       product.save
-      
+
+      special_price_field = IMPORT_PRODUCT_SETTINGS[:special_price_field]
+      set_special_price(product.master, params_hash[special_price_field.to_sym])
       
       #Associate our new product with any taxonomies that we need to worry about
       IMPORT_PRODUCT_SETTINGS[:taxonomy_fields].each do |field| 
@@ -369,6 +377,13 @@ class ProductImport < ActiveRecord::Base
       product_property.value = value
       log "Product property invalid" unless product_property.valid?
       product_property.save
+    end
+  end
+
+  def set_special_price(variant, special_price)
+    if special_price
+      log "Setting special price: #{special_price} on #{variant.sku}"
+      variant.set_special_price special_price
     end
   end
 end
