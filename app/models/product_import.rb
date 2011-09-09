@@ -83,7 +83,7 @@ class ProductImport < ActiveRecord::Base
 
       log("Importing products for #{self.data_file_file_name} completed at #{DateTime.now}")
 
-    rescue Exception => exp
+    rescue => exp
       log("An error occurred during import, please check file and try again. (#{exp.message})\n#{exp.backtrace.join('\n')}", :error)
       raise
     end
