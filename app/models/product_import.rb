@@ -275,8 +275,11 @@ class ProductImport < ActiveRecord::Base
   def find_and_attach_image_to(product_or_variant, filename)
     return if filename.blank?
     
+    remote_pattern = /\Ahttp[s]?:\/\//
+    image_path = IMPORT_PRODUCT_SETTINGS[:product_image_path]
+    filename = URI.join(image_path, URI.encode(filename)).to_s if image_path =~ remote_pattern
     #The image can be fetched from an HTTP or local source - either method returns a Tempfile
-    file = filename =~ /\Ahttp[s]*:\/\// ? fetch_remote_image(filename) : fetch_local_image(filename)
+    file = filename =~ remote_pattern ? fetch_remote_image(filename) : fetch_local_image(filename)
     #An image has an attachment (the image file) and some object which 'views' it
     product_image = Image.new({:attachment => file,
                               :viewable => product_or_variant,
@@ -290,6 +293,7 @@ class ProductImport < ActiveRecord::Base
   # images, and the file is accessible to the script.
   # It is basically just a wrapper around basic File IO methods.
   def fetch_local_image(filename)
+    log "Fetching local image: #{filename}"
     filename = IMPORT_PRODUCT_SETTINGS[:product_image_path] + filename
     unless File.exists?(filename) && File.readable?(filename)
       log("Image #{filename} was not found on the server, so this image was not imported.", :warn)
@@ -306,6 +310,7 @@ class ProductImport < ActiveRecord::Base
   # If it fails, it in the first instance logs the HTTP error (404, 500 etc)
   # If it fails altogether, it logs it and exits the method.
   def fetch_remote_image(filename)
+    log "Fetching remote image: #{filename}"
     begin
       open(filename)
     rescue OpenURI::HTTPError => error
