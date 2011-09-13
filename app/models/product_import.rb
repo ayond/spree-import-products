@@ -6,7 +6,15 @@
 # License:: MIT
 
 class ProductImport < ActiveRecord::Base
-  has_attached_file :data_file, :path => ":rails_root/tmp/product_data/data-files/:basename.:extension"
+  has_attached_file :data_file,
+   :path => Rails.env == 'production' ? 
+     "product_data/data-files/:basename.:extension" : ":rails_root/tmp/product_data/data-files/:basename.:extension",
+    :storage => Rails.env == 'production' ? 's3' : 'filesystem',
+    :s3_credentials => {
+      :access_key_id => ENV['S3_KEY'],
+      :secret_access_key => ENV['S3_SECRET']
+    },
+    :bucket => ENV['S3_BUCKET']
   validates_attachment_presence :data_file
 
   require 'csv'
@@ -29,7 +37,8 @@ class ProductImport < ActiveRecord::Base
       end
       log("#{@names_of_products_before_import}")
             
-      rows = CSV.read(self.data_file.path, :encoding => "utf-8")
+      path = self.data_file.respond_to?(:to_file) ? self.data_file.to_file.path : self.data_file.path
+      rows = CSV.read(path, :encoding => "utf-8")
       
       if IMPORT_PRODUCT_SETTINGS[:first_row_is_headings]
         col = get_column_mappings(rows[0])
