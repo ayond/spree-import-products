@@ -370,11 +370,16 @@ class ProductImport < ActiveRecord::Base
       log "Relation type: #{relation_type_name}"
       relation_type = RelationType.find_by_name(relation_type_name)
       relation_type = RelationType.create(:name => relation_type_name, :applies_to => "Product") if relation_type.nil?
-      related_variant = Variant.find_by_sku(product_information[relation_type_symbol])
-      log "Related to #{product_information[relation_type_symbol]}"
-      Relation.create(:relation_type => relation_type,
-                      :relatable => product,
-                      :related_to => related_variant.product) unless related_variant.nil?
+      related_delimited_list = product_information[relation_type_symbol]
+      related_delimited_list ||= ''
+      related_variant_list = related_delimited_list.split(';')
+      related_variant_list.each do |variant_sku|
+        related_variant = Variant.find_by_sku(variant_sku.strip)
+        log "Related to #{variant_sku}"
+        Relation.create(:relation_type => relation_type,
+                        :relatable => product,
+                        :related_to => related_variant.product) unless related_variant.nil?
+      end
     end
   end
 
